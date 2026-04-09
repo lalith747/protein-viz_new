@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ProteinViz 3D — Molecular Structure Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://3dmol.org/build/3Dmol-min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   PROTEINVIZ 3D — Deep Space Biopunk Design System
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg0:        #03060f;
+  --bg1:        #060d1a;
+  --bg2:        #0a1220;
+  --bg3:        #0f1a2e;
+  --bg4:        #14223a;
+  --cyan:       #00d4ff;
+  --cyan2:      #00a8cc;
+  --cyan-glow:  rgba(0,212,255,0.18);
+  --purple:     #a855f7;
+  --purple-glow:rgba(168,85,247,0.15);
+  --green:      #00ffa3;
+  --green-glow: rgba(0,255,163,0.15);
+  --amber:      #ffb800;
+  --red:        #ff4d6d;
+  --border1:    rgba(0,212,255,0.08);
+  --border2:    rgba(0,212,255,0.18);
+  --border3:    rgba(0,212,255,0.45);
+  --text1:      #e2eeff;
+  --text2:      #7a9bb8;
+  --text3:      #3d5a7a;
+  --font:       'Space Grotesk', sans-serif;
+  --mono:       'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--font);
+  background: var(--bg0);
+  color: var(--text1);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ══ TOPBAR ══════════════════════════════════════════════════ */
+#topbar {
+  height: 60px;
+  min-height: 60px;
+  background: rgba(6,13,26,0.97);
+  border-bottom: 1px solid var(--border1);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  flex-shrink: 0;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.logo-text span { background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.logo-sub { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.2em; text-transform: uppercase; }
+
+.search-wrap {
+  flex: 1;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  background: var(--bg3);
+  border: 1px solid var(--border1);
+  border-radius: 12px;
+  padding: 0 6px 0 16px;
+  gap: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-wrap:focus-within {
+  border-color: var(--border3);
+  box-shadow: 0 0 0 3px var(--cyan-glow);
+}
+.search-wrap input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text1);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 0;
+}
+.search-wrap input::placeholder { color: var(--text3); }
+#loadBtn {
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  color: #000;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+#loadBtn:hover { opacity: 0.9; transform: scale(1.02); }
+#loadBtn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.presets {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.preset-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border1);
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.preset-btn:hover { border-color: var(--border3); color: var(--cyan); background: var(--cyan-glow); }
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ══ MAIN AREA ════════════════════════════════════════════════ */
+#main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr 380px;
+  grid-template-rows: 1fr 200px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ══ LEFT PANEL ══════════════════════════════════════════════ */
+#leftPanel {
+  grid-row: 1 / 3;
+  background: var(--bg1);
+  border-right: 1px solid var(--border1);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.panel-section {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border1);
+}
+.section-title {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--border2), transparent); }
+
+/* Style buttons grid */
+.style-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+.style-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border1);
+  border-radius: 8px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.style-btn .s-icon { font-size: 16px; display: block; margin-bottom: 3px; }
+.style-btn:hover { border-color: var(--border3); color: var(--cyan); background: var(--cyan-glow); }
+.style-btn.active { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-glow); }
+
+/* Color buttons */
+.color-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.color-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border1);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.color-swatch { width: 40px; height: 6px; border-radius: 3px; }
+.color-btn:hover, .color-btn.active { border-color: var(--border3); color: var(--text1); }
+
+/* Action buttons */
+.action-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border1);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.action-btn:hover { background: var(--bg4); border-color: var(--border2); color: var(--text1); }
+
+/* Metadata */
+.meta-grid { display: grid; grid-template-columns: 82px 1fr; gap: 4px 8px; align-items: start; }
+.mk { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; padding-top: 1px; }
+.mv { font-family: var(--mono); font-size: 10px; color: var(--text1); word-break: break-word; line-height: 1.4; }
+.mv.cyan { color: var(--cyan); font-weight: 600; font-size: 14px; }
+.mv.green { color: var(--green); }
+
+.chain-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.chain-tag {
+  background: var(--bg4);
+  border: 1px solid var(--border1);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chain-tag:hover, .chain-tag.active { color: var(--cyan); border-color: var(--cyan); background: var(--cyan-glow); }
+
+/* ══ CENTER VIEWER ════════════════════════════════════════════ */
+#viewerArea {
+  position: relative;
+  background: var(--bg0);
+  overflow: hidden;
+}
+#viewer3d { width: 100%; height: 100%; }
+
+/* Loading overlay */
+#loadingOverlay {
+  position: absolute; inset: 0;
+  background: rgba(3,6,15,0.93);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition: opacity 0.35s;
+  backdrop-filter: blur(4px);
+}
+#loadingOverlay.hidden { opacity: 0; pointer-events: none; }
+
+.dna-loader {
+  position: relative;
+  width: 72px; height: 72px;
+  margin-bottom: 24px;
+}
+.dna-dot {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  animation: orbit 1.5s linear infinite;
+}
+.dna-dot:nth-child(1) { background: var(--cyan);   animation-delay: 0s;    }
+.dna-dot:nth-child(2) { background: var(--purple); animation-delay: 0.19s; }
+.dna-dot:nth-child(3) { background: var(--green);  animation-delay: 0.38s; }
+.dna-dot:nth-child(4) { background: var(--cyan);   animation-delay: 0.56s; }
+.dna-dot:nth-child(5) { background: var(--purple); animation-delay: 0.75s; }
+.dna-dot:nth-child(6) { background: var(--green);  animation-delay: 0.94s; }
+.dna-dot:nth-child(7) { background: var(--cyan);   animation-delay: 1.13s; }
+.dna-dot:nth-child(8) { background: var(--purple); animation-delay: 1.31s; }
+@keyframes orbit {
+  from { transform: rotate(0deg)   translateX(30px) scale(1); }
+  50%  { transform: rotate(180deg) translateX(30px) scale(0.6); }
+  to   { transform: rotate(360deg) translateX(30px) scale(1); }
+}
+#loadingText {
+  font-family: var(--mono); font-size: 13px;
+  color: var(--cyan); letter-spacing: 0.25em;
+  text-transform: uppercase;
+  animation: blink 1.1s ease-in-out infinite;
+}
+#loadingSub {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--text3); margin-top: 6px;
+  letter-spacing: 0.15em; text-transform: uppercase;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.progress-track { width: 180px; height: 2px; background: var(--border1); border-radius: 2px; margin-top: 20px; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(to right, var(--cyan), var(--purple)); border-radius: 2px; animation: sweep 1.8s ease-in-out infinite; box-shadow: 0 0 8px var(--cyan); }
+@keyframes sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+
+/* Empty state */
+#emptyState {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.empty-emoji { font-size: 64px; opacity: 0.07; animation: float 4s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.empty-label { font-family: var(--mono); font-size: 12px; color: var(--text3); margin-top: 14px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* Viewer HUD */
+.viewer-hud {
+  position: absolute; top: 14px; right: 14px;
+  display: flex; flex-direction: column; gap: 5px;
+  z-index: 10;
+}
+.hud-btn {
+  width: 34px; height: 34px;
+  background: rgba(10,18,32,0.88);
+  border: 1px solid var(--border1);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px;
+  color: var(--text2);
+  transition: all 0.15s;
+  backdrop-filter: blur(8px);
+}
+.hud-btn:hover { border-color: var(--border3); color: var(--cyan); background: var(--cyan-glow); }
+
+/* PDB Badge */
+#pdbBadge {
+  position: absolute; top: 14px; left: 14px;
+  background: rgba(10,18,32,0.88);
+  border: 1px solid var(--border1);
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: none;
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+#pdbBadge.show { display: block; }
+#badgePdbId { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--cyan); letter-spacing: 0.12em; }
+#badgeTitle { font-size: 11px; color: var(--text2); margin-top: 2px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Atom tooltip */
+#atomTooltip {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(10,18,32,0.94);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-family: var(--mono); font-size: 12px; color: var(--text1);
+  white-space: nowrap; display: none;
+  box-shadow: 0 0 20px var(--cyan-glow);
+  z-index: 20;
+}
+
+/* ══ SEQUENCE PANEL (bottom center) ══════════════════════════ */
+#seqPanel {
+  background: var(--bg1);
+  border-top: 1px solid var(--border1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.seq-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg0);
+  border-bottom: 1px solid var(--border1);
+  flex-shrink: 0;
+}
+.seq-title { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.2em; color: var(--cyan); text-transform: uppercase; flex: 1; }
+.copy-btn {
+  background: var(--bg3); border: 1px solid var(--border1);
+  border-radius: 6px; padding: 3px 10px;
+  font-family: var(--mono); font-size: 9px; color: var(--text2);
+  cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { border-color: var(--border2); color: var(--text1); }
+#seqContent { flex: 1; overflow-y: auto; padding: 10px 14px; }
+.seq-chain-block { margin-bottom: 14px; }
+.seq-chain-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.chain-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 2px 10px; border-radius: 5px; border: 1px solid;
+}
+.chain-meta { font-family: var(--mono); font-size: 9px; color: var(--text3); }
+.fasta-header { font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 4px; }
+.seq-rows { background: var(--bg2); border-radius: 6px; padding: 8px 10px; }
+.seq-row { display: flex; gap: 8px; margin-bottom: 2px; align-items: baseline; }
+.seq-num { font-family: var(--mono); font-size: 10px; color: var(--text3); min-width: 42px; text-align: right; user-select: none; }
+.seq-chars { font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; color: var(--text1); word-break: break-all; }
+.seq-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); padding: 20px 0; }
+
+/* ══ RIGHT PANEL ══════════════════════════════════════════════ */
+#rightPanel {
+  grid-row: 1 / 3;
+  background: var(--bg1);
+  border-left: 1px solid var(--border1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  background: var(--bg0);
+  border-bottom: 1px solid var(--border1);
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 12px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+.tab-pane { display: none; flex: 1; overflow-y: auto; }
+.tab-pane.active { display: flex; flex-direction: column; }
+
+/* Details tab */
+.detail-section { border-bottom: 1px solid var(--border1); }
+.detail-section-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg0);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.detail-section-hdr:hover { background: var(--bg2); }
+.detail-section-icon { font-size: 12px; }
+.detail-section-title { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.15em; flex: 1; }
+.detail-section-arrow { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
+.detail-section.collapsed .detail-section-arrow { transform: rotate(-90deg); }
+.detail-section-body { padding: 10px 14px 12px; }
+.detail-section.collapsed .detail-section-body { display: none; }
+.detail-row { display: grid; grid-template-columns: 100px 1fr; gap: 4px 8px; margin-bottom: 6px; align-items: start; }
+.dk { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; padding-top: 1px; }
+.dv { font-family: var(--mono); font-size: 10px; color: var(--text1); word-break: break-word; line-height: 1.4; }
+.dv.cyan { color: var(--cyan); font-weight: 700; font-size: 16px; }
+.dv.green { color: var(--green); font-weight: 600; }
+
+/* Publications tab */
+.pub-card {
+  padding: 14px;
+  border-bottom: 1px solid var(--border1);
+  transition: background 0.15s;
+}
+.pub-card:hover { background: var(--bg2); }
+.pub-title { font-size: 12px; font-weight: 600; color: var(--text1); line-height: 1.5; margin-bottom: 6px; }
+.pub-authors { font-family: var(--mono); font-size: 10px; color: var(--text2); margin-bottom: 5px; }
+.pub-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pub-journal { font-family: var(--mono); font-size: 10px; color: var(--cyan); font-weight: 600; }
+.pub-year { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.pub-pmid { font-family: var(--mono); font-size: 9px; color: var(--text3); background: var(--bg3); border: 1px solid var(--border1); border-radius: 4px; padding: 1px 6px; }
+.pub-doi-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.doi-link {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--purple);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  flex: 1;
+  word-break: break-all;
+  transition: color 0.15s;
+}
+.doi-link:hover { color: #c084fc; }
+.open-doi-btn {
+  background: rgba(168,85,247,0.12);
+  border: 1px solid rgba(168,85,247,0.35);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  color: var(--purple);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.open-doi-btn:hover { background: rgba(168,85,247,0.25); border-color: var(--purple); }
+.no-content { font-family: var(--mono); font-size: 11px; color: var(--text3); padding: 24px 14px; text-align: center; }
+
+/* ══ STAT BARS ════════════════════════════════════════════════ */
+.stat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.stat-label { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; width: 60px; flex-shrink: 0; }
+.stat-val { font-family: var(--mono); font-size: 11px; color: var(--text1); width: 55px; text-align: right; flex-shrink: 0; }
+.stat-track { flex: 1; height: 3px; background: var(--border1); border-radius: 2px; overflow: hidden; }
+.stat-fill { height: 100%; background: linear-gradient(to right, var(--cyan), var(--purple)); border-radius: 2px; width: 0%; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+/* ══ NOTIFICATIONS ════════════════════════════════════════════ */
+#notifContainer {
+  position: fixed; top: 72px; right: 16px;
+  z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.notif {
+  background: var(--bg4);
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-family: var(--mono); font-size: 11px;
+  max-width: 300px;
+  animation: slideIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+.notif.ok  { border-left: 3px solid var(--green);  color: var(--green); }
+.notif.err { border-left: 3px solid var(--red);    color: var(--red); }
+.notif.info{ border-left: 3px solid var(--cyan);   color: var(--text2); }
+@keyframes slideIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ══ STARFIELD ════════════════════════════════════════════════ */
+#stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+#main, #topbar { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<div id="notifContainer"></div>
+
+<!-- ══ TOPBAR ══════════════════════════════════════════════ -->
+<header id="topbar">
+  <div class="logo">
+    <div class="logo-icon">🧬</div>
+    <div>
+      <div class="logo-text"><span>ProteinViz</span> 3D</div>
+      <div class="logo-sub">Molecular Explorer</div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="searchInput" type="text" placeholder="Enter protein name or PDB ID  (e.g. hemoglobin, 1HHO, CRISPR)" autocomplete="off" spellcheck="false"/>
+    <button id="loadBtn">LOAD</button>
+  </div>
+
+  <div class="presets">
+    <button class="preset-btn" onclick="quickLoad('1HHO')">1HHO</button>
+    <button class="preset-btn" onclick="quickLoad('6VXX')">6VXX</button>
+    <button class="preset-btn" onclick="quickLoad('4ZQK')">4ZQK</button>
+    <button class="preset-btn" onclick="quickLoad('1TIM')">1TIM</button>
+    <button class="preset-btn" onclick="quickLoad('1BNA')">1BNA</button>
+  </div>
+
+  <div class="status-dot" title="RCSB PDB Connected"></div>
+</header>
+
+<!-- ══ MAIN GRID ════════════════════════════════════════════ -->
+<div id="main">
+
+  <!-- LEFT: Controls + Metadata -->
+  <aside id="leftPanel">
+
+    <!-- Style controls -->
+    <div class="panel-section">
+      <div class="section-title">Render Style</div>
+      <div class="style-grid">
+        <button class="style-btn active" id="sty-cartoon" onclick="setStyle('cartoon')"><span class="s-icon">🎗️</span>Ribbon</button>
+        <button class="style-btn" id="sty-stick"   onclick="setStyle('stick')"  ><span class="s-icon">🔩</span>Stick</button>
+        <button class="style-btn" id="sty-sphere"  onclick="setStyle('sphere')" ><span class="s-icon">⚛️</span>Sphere</button>
+        <button class="style-btn" id="sty-line"    onclick="setStyle('line')"   ><span class="s-icon">📐</span>Line</button>
+        <button class="style-btn" id="sty-surface" onclick="setStyle('surface')"><span class="s-icon">🫧</span>Surface</button>
+        <button class="style-btn" id="sty-cross"   onclick="setStyle('cross')"  ><span class="s-icon">✚</span>Cross</button>
+      </div>
+    </div>
+
+    <!-- Color -->
+    <div class="panel-section">
+      <div class="section-title">Color Scheme</div>
+      <div class="color-grid">
+        <button class="color-btn active" id="col-chain"   onclick="setColor('chain')"  ><div class="color-swatch" style="background:linear-gradient(to right,#ff4d6d,#ffb800,#00ffa3,#00d4ff,#a855f7)"></div>Chain</button>
+        <button class="color-btn" id="col-ss"      onclick="setColor('ss')"    ><div class="color-swatch" style="background:linear-gradient(to right,#ff6b6b,#4ecdc4,#45b7d1)"></div>Sec. Struct</button>
+        <button class="color-btn" id="col-hydro"   onclick="setColor('hydro')" ><div class="color-swatch" style="background:linear-gradient(to right,#0066ff,#fff,#ff4d6d)"></div>Hydrophob.</button>
+        <button class="color-btn" id="col-bfactor" onclick="setColor('bfactor')"><div class="color-swatch" style="background:linear-gradient(to right,#0000ff,#0ff,#0f0,#ff0,#f00)"></div>B-Factor</button>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel-section">
+      <div class="section-title">Actions</div>
+      <button class="action-btn" onclick="resetView()">🎯 Reset View</button>
+      <button class="action-btn" id="spinBtn" onclick="toggleSpin()">🔄 Start Auto-Spin</button>
+      <button class="action-btn" onclick="toggleBg()">🌑 Toggle Background</button>
+      <button class="action-btn" onclick="downloadPdb()">⬇️ Download PDB</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="panel-section" id="statsSection" style="display:none">
+      <div class="section-title">Live Stats</div>
+      <div class="stat-row"><span class="stat-label">Atoms</span><div class="stat-track"><div class="stat-fill" id="barAtoms"></div></div><span class="stat-val" id="statAtoms">—</span></div>
+      <div class="stat-row"><span class="stat-label">Residues</span><div class="stat-track"><div class="stat-fill" id="barResidues"></div></div><span class="stat-val" id="statResidues">—</span></div>
+      <div class="stat-row"><span class="stat-label">Chains</span><div class="stat-track"><div class="stat-fill" id="barChains"></div></div><span class="stat-val" id="statChains">—</span></div>
+      <div class="stat-row"><span class="stat-label">Fetch</span><div class="stat-track" style="background:transparent"></div><span class="stat-val" id="statTime" style="color:var(--green)">—</span></div>
+    </div>
+
+    <!-- Basic metadata (shown after load) -->
+    <div class="panel-section" id="basicMeta" style="display:none">
+      <div class="section-title">Protein Data</div>
+      <div class="meta-grid">
+        <span class="mk">PDB ID</span><span class="mv cyan" id="mPdbId">—</span>
+        <span class="mk">Title</span><span class="mv" id="mTitle">—</span>
+        <span class="mk">Organism</span><span class="mv" id="mOrganism">—</span>
+        <span class="mk">Method</span><span class="mv" id="mMethod">—</span>
+        <span class="mk">Resolution</span><span class="mv green" id="mResolution">—</span>
+        <span class="mk">Released</span><span class="mv" id="mReleased">—</span>
+        <span class="mk">Mol. Weight</span><span class="mv" id="mMw">—</span>
+      </div>
+      <div style="margin-top:8px">
+        <div class="mk" style="margin-bottom:5px">Chains</div>
+        <div class="chain-tags" id="chainTags"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER: 3D Viewer -->
+  <div id="viewerArea">
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay">
+      <div class="dna-loader">
+        <div class="dna-dot"></div><div class="dna-dot"></div><div class="dna-dot"></div>
+        <div class="dna-dot"></div><div class="dna-dot"></div><div class="dna-dot"></div>
+        <div class="dna-dot"></div><div class="dna-dot"></div>
+      </div>
+      <div id="loadingText">INITIALIZING</div>
+      <div id="loadingSub">MOLECULAR RENDERER</div>
+      <div class="progress-track"><div class="progress-bar"></div></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState">
+      <div class="empty-emoji">🧬</div>
+      <div class="empty-label">Search for a protein to begin</div>
+    </div>
+
+    <!-- 3D Viewer target -->
+    <div id="viewer3d"></div>
+
+    <!-- PDB badge -->
+    <div id="pdbBadge">
+      <div id="badgePdbId">—</div>
+      <div id="badgeTitle">—</div>
+    </div>
+
+    <!-- HUD -->
+    <div class="viewer-hud">
+      <div class="hud-btn" onclick="doZoom(1.25)" title="Zoom In">+</div>
+      <div class="hud-btn" onclick="doZoom(0.75)" title="Zoom Out">−</div>
+      <div class="hud-btn" onclick="resetView()" title="Reset">⌖</div>
+    </div>
+
+    <!-- Atom tooltip -->
+    <div id="atomTooltip"></div>
+  </div>
+
+  <!-- BOTTOM CENTER: Sequence Panel -->
+  <div id="seqPanel">
+    <div class="seq-header">
+      <span class="seq-title" id="seqTitle">🧬 Amino Acid Sequence</span>
+      <button class="copy-btn" onclick="copyFasta()">Copy FASTA</button>
+    </div>
+    <div id="seqContent"><div class="seq-empty">Load a protein to view sequence data</div></div>
+  </div>
+
+  <!-- RIGHT: Details + Publications tabs -->
+  <aside id="rightPanel">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="details" onclick="switchTab('details')">🔬 Details</button>
+      <button class="tab-btn" data-tab="publications" onclick="switchTab('publications')">📄 Publications</button>
+    </div>
+
+    <!-- Details tab -->
+    <div class="tab-pane active" id="tab-details">
+      <div class="no-content" id="detailsEmpty">Load a protein to see full details</div>
+      <div id="detailsContent" style="display:none">
+
+        <div class="detail-section" id="sec-identity">
+          <div class="detail-section-hdr" onclick="toggleSection('identity')">
+            <span class="detail-section-icon">🔷</span>
+            <span class="detail-section-title">Identity</span>
+            <span class="detail-section-arrow">▾</span>
+          </div>
+          <div class="detail-section-body">
+            <div class="detail-row"><span class="dk">PDB ID</span><span class="dv cyan" id="dPdbId">—</span></div>
+            <div class="detail-row"><span class="dk">Title</span><span class="dv" id="dTitle">—</span></div>
+            <div class="detail-row"><span class="dk">Type</span><span class="dv" id="dType">—</span></div>
+            <div class="detail-row"><span class="dk">Keywords</span><span class="dv" id="dKeywords">—</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section" id="sec-biology">
+          <div class="detail-section-hdr" onclick="toggleSection('biology')">
+            <span class="detail-section-icon">🧫</span>
+            <span class="detail-section-title">Biology</span>
+            <span class="detail-section-arrow">▾</span>
+          </div>
+          <div class="detail-section-body">
+            <div class="detail-row"><span class="dk">Organism</span><span class="dv" id="dOrganism">—</span></div>
+            <div class="detail-row"><span class="dk">Scientific</span><span class="dv" id="dSciName" style="font-style:italic">—</span></div>
+            <div class="detail-row"><span class="dk">Taxonomy</span><span class="dv" id="dTaxId">—</span></div>
+            <div class="detail-row"><span class="dk">Gene</span><span class="dv" id="dGene">—</span></div>
+            <div class="detail-row"><span class="dk">Function</span><span class="dv" id="dFunction">—</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section" id="sec-experiment">
+          <div class="detail-section-hdr" onclick="toggleSection('experiment')">
+            <span class="detail-section-icon">⚗️</span>
+            <span class="detail-section-title">Experiment</span>
+            <span class="detail-section-arrow">▾</span>
+          </div>
+          <div class="detail-section-body">
+            <div class="detail-row"><span class="dk">Method</span><span class="dv" id="dMethod">—</span></div>
+            <div class="detail-row"><span class="dk">Resolution</span><span class="dv green" id="dResolution">—</span></div>
+            <div class="detail-row"><span class="dk">Space Group</span><span class="dv" id="dSpaceGroup">—</span></div>
+            <div class="detail-row"><span class="dk">Unit Cell</span><span class="dv" id="dUnitCell">—</span></div>
+            <div class="detail-row"><span class="dk">Deposited</span><span class="dv" id="dDeposited">—</span></div>
+            <div class="detail-row"><span class="dk">Released</span><span class="dv" id="dReleased">—</span></div>
+          </div>
+        </div>
+
+        <div class="detail-section" id="sec-composition">
+          <div class="detail-section-hdr" onclick="toggleSection('composition')">
+            <span class="detail-section-icon">⚖️</span>
+            <span class="detail-section-title">Composition</span>
+            <span class="detail-section-arrow">▾</span>
+          </div>
+          <div class="detail-section-body">
+            <div class="detail-row"><span class="dk">Atoms</span><span class="dv" id="dAtoms">—</span></div>
+            <div class="detail-row"><span class="dk">Residues</span><span class="dv" id="dResidues">—</span></div>
+            <div class="detail-row"><span class="dk">Chains</span><span class="dv" id="dChains">—</span></div>
+            <div class="detail-row"><span class="dk">Mol. Weight</span><span class="dv" id="dMw">—</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Publications tab -->
+    <div class="tab-pane" id="tab-publications">
+      <div class="no-content" id="pubsEmpty">Load a protein to view publications</div>
+      <div id="pubsContent"></div>
+    </div>
+  </aside>
+
+</div><!-- #main -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════
+// PROTEINVIZ 3D — Frontend Application
+// Spring Boot backend + 3Dmol.js 3D rendering
+// ═══════════════════════════════════════════════
+
+// ── State ──────────────────────────────────────
+let viewer = null;
+let currentStyle = 'cartoon';
+let currentColor = 'chain';
+let isSpinning   = false;
+let bgWhite      = false;
+let currentPdbId = null;
+let currentData  = null;
+let fastaCache   = '';
+
+// ── Starfield ──────────────────────────────────
+(function(){
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  let W, H, stars=[];
+  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; }
+  function make(){ stars=Array.from({length:160},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.1+0.2,o:Math.random()*0.5+0.05,s:(Math.random()-0.5)*0.02})); }
+  function draw(){ ctx.clearRect(0,0,W,H); for(const s of stars){ s.o=Math.max(0.05,Math.min(0.55,s.o+s.s)); ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(0,212,255,${s.o})`; ctx.fill(); } requestAnimationFrame(draw); }
+  resize(); make(); draw();
+  addEventListener('resize',()=>{resize();make();});
+})();
+
+// ── 3Dmol init ─────────────────────────────────
+function initViewer(){
+  if(viewer) return;
+  viewer = $3Dmol.createViewer(document.getElementById('viewer3d'),{
+    defaultcolors: $3Dmol.rasmolElementColors,
+    backgroundColor: '0x03060f',
+    antialias: true
+  });
+}
+
+// ── Load structure from PDB text ────────────────
+function renderStructure(pdbText){
+  if(!viewer) initViewer();
+  viewer.clear();
+  viewer.addModel(pdbText, 'pdb');
+  applyStyle(currentStyle, currentColor);
+  viewer.setClickable({}, true, onAtomClick);
+  viewer.zoomTo();
+  viewer.render();
+}
+
+// ── Apply style ─────────────────────────────────
+function applyStyle(style, color){
+  if(!viewer) return;
+  const cfg = colorCfg(color);
+  viewer.setStyle({},{});
+  switch(style){
+    case 'cartoon': viewer.setStyle({},{cartoon:cfg}); break;
+    case 'stick':   viewer.setStyle({},{stick:{...cfg,radius:0.15}}); break;
+    case 'sphere':  viewer.setStyle({},{sphere:{...cfg,scale:0.3}}); break;
+    case 'line':    viewer.setStyle({},{line:cfg}); break;
+    case 'surface':
+      viewer.setStyle({},{cartoon:{...cfg,opacity:0.4}});
+      try{ viewer.addSurface($3Dmol.SurfaceType.VDW,{opacity:0.55,colorscheme:color==='chain'?'chainHetatm':color==='ss'?'ssJmol':'whiteCarbon'}); }catch(e){}
+      break;
+    case 'cross':   viewer.setStyle({},{cross:{...cfg,lineWidth:2}}); break;
+    default:        viewer.setStyle({},{cartoon:cfg});
+  }
+  viewer.render();
+}
+function colorCfg(s){
+  switch(s){
+    case 'chain':   return {colorscheme:'chainHetatm'};
+    case 'ss':      return {colorscheme:'ssJmol'};
+    case 'hydro':   return {colorscheme:'hydrophobicity'};
+    case 'bfactor': return {colorscheme:'bfactor'};
+    default:        return {colorscheme:'chainHetatm'};
+  }
+}
+
+// ── Style & Color setters ───────────────────────
+function setStyle(s){
+  if(!viewer){notify('Load a protein first','info');return;}
+  currentStyle=s;
+  document.querySelectorAll('.style-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sty-'+s)?.classList.add('active');
+  viewer.removeAllSurfaces();
+  applyStyle(s,currentColor);
+}
+function setColor(c){
+  if(!viewer){notify('Load a protein first','info');return;}
+  currentColor=c;
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('col-'+c)?.classList.add('active');
+  applyStyle(currentStyle,c);
+}
+
+// ── Controls ────────────────────────────────────
+function resetView(){ if(!viewer) return; viewer.removeAllSurfaces(); applyStyle(currentStyle,currentColor); viewer.zoomTo(); viewer.render(); document.querySelectorAll('.chain-tag').forEach(t=>t.classList.remove('active')); }
+function toggleSpin(){
+  if(!viewer){notify('Load a protein first','info');return;}
+  isSpinning=!isSpinning;
+  viewer.spin(isSpinning?'y':false);
+  document.getElementById('spinBtn').textContent=isSpinning?'⏹ Stop Auto-Spin':'🔄 Start Auto-Spin';
+}
+function toggleBg(){
+  if(!viewer){notify('Load a protein first','info');return;}
+  bgWhite=!bgWhite;
+  viewer.setBackgroundColor(bgWhite?'white':'0x03060f');
+  viewer.render();
+}
+function doZoom(f){ if(viewer) viewer.zoom(f,400); }
+function highlightChain(ch){
+  if(!viewer) return;
+  viewer.setStyle({},{cartoon:{color:'#0a1220',opacity:0.25}});
+  viewer.setStyle({chain:ch},{cartoon:{colorscheme:'chainHetatm'}});
+  viewer.render();
+}
+function downloadPdb(){
+  if(!currentPdbId){notify('No protein loaded','info');return;}
+  window.open('/api/protein/pdb/'+currentPdbId,'_blank');
+}
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+}
+function toggleSection(id){
+  document.getElementById('sec-'+id)?.classList.toggle('collapsed');
+}
+
+// ── Atom click ──────────────────────────────────
+function onAtomClick(atom){
+  const tip = document.getElementById('atomTooltip');
+  tip.textContent = `${atom.resn||'?'} ${atom.resi||'?'}  (Chain ${atom.chain||'?'})  ·  ${atom.atom||'?'} / ${atom.elem||'?'}`;
+  tip.style.display='block';
+  setTimeout(()=>tip.style.display='none', 3500);
+}
+
+// ── Main load flow ──────────────────────────────
+async function loadProtein(query){
+  if(!query?.trim()){notify('Please enter a protein name or PDB ID','info');return;}
+  query = query.trim();
+  setLoading(true,'RESOLVING','RCSB PDB API');
+
+  try {
+    // Step 1: Fetch metadata + sequence + publications from our Java backend
+    const metaRes = await fetch('/api/protein/load/'+encodeURIComponent(query));
+    const metaJson = await metaRes.json();
+    if(!metaJson.success) throw new Error(metaJson.message||'Protein not found');
+
+    const p = metaJson.data;
+    currentPdbId = p.pdbId;
+    currentData  = p;
+
+    // Step 2: Fetch PDB file from backend (cached on disk, served via /api/protein/pdb/{id})
+    setLoading(true,'LOADING STRUCTURE','PDB ID: '+p.pdbId);
+    const pdbRes  = await fetch('/api/protein/pdb/'+p.pdbId);
+    if(!pdbRes.ok) {
+      const errText = await pdbRes.text();
+      throw new Error('PDB download failed (HTTP '+pdbRes.status+'): '+errText.substring(0,120));
+    }
+    const pdbText = await pdbRes.text();
+    if(!pdbText || pdbText.length < 100) throw new Error('PDB file empty or too small — structure may not be available');
+    if(pdbText.includes('<!DOCTYPE') || pdbText.includes('<html')) throw new Error('RCSB returned an HTML error page instead of PDB data');
+
+    // Step 3: Render 3D
+    setLoading(true,'RENDERING','BUILDING 3D MODEL');
+    await sleep(50); // allow repaint
+    initViewer();
+    renderStructure(pdbText);
+
+    // Step 4: Update UI
+    updateUI(p);
+    setLoading(false);
+    notify(p.pdbId+' loaded!','ok');
+
+  } catch(e){
+    setLoading(false);
+    notify(e.message,'err');
+    console.error(e);
+  }
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ── Update all UI panels ────────────────────────
+function updateUI(p){
+  document.getElementById('emptyState').style.display='none';
+
+  // Badge
+  document.getElementById('pdbBadge').classList.add('show');
+  document.getElementById('badgePdbId').textContent = p.pdbId||'—';
+  document.getElementById('badgeTitle').textContent  = truncate(p.title||'',42);
+
+  // Left sidebar basic meta
+  document.getElementById('basicMeta').style.display='block';
+  document.getElementById('statsSection').style.display='block';
+  setText('mPdbId',    p.pdbId);
+  setText('mTitle',    p.title);
+  setText('mOrganism', p.organism||p.scientificName);
+  setText('mMethod',   p.experimentMethod);
+  setText('mResolution', p.resolution);
+  setText('mReleased',   shortDate(p.releaseDate));
+  setText('mMw',         p.molecularWeight);
+
+  // Chain tags
+  const ct = document.getElementById('chainTags');
+  ct.innerHTML='';
+  const colors = ['#ff4d6d','#00ffa3','#00d4ff','#a855f7','#ffb800','#ff69b4','#44ffcc'];
+  (p.chains||[]).forEach((ch,i)=>{
+    const t = document.createElement('button');
+    t.className='chain-tag';
+    t.textContent='Chain '+ch;
+    t.style.borderColor=colors[i%colors.length];
+    t.onclick=()=>{
+      document.querySelectorAll('.chain-tag').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      t.style.backgroundColor=colors[i%colors.length]+'22';
+      t.style.color=colors[i%colors.length];
+      highlightChain(ch);
+    };
+    ct.appendChild(t);
+  });
+
+  // Stats bars
+  const animate=(id,bar,val,max)=>{
+    setText(id, val>0?val.toLocaleString():'—');
+    setTimeout(()=>{ const el=document.getElementById(bar); if(el) el.style.width=Math.min(100,val/max*100)+'%'; }, 100);
+  };
+  animate('statAtoms',    'barAtoms',    p.atomCount,    50000);
+  animate('statResidues', 'barResidues', p.residueCount, 5000);
+  animate('statChains',   'barChains',   p.chainCount,   26);
+  setText('statTime', p.fetchTimeMs>0 ? p.fetchTimeMs+'ms' : '—');
+
+  // Right panel details
+  document.getElementById('detailsEmpty').style.display='none';
+  document.getElementById('detailsContent').style.display='block';
+  setText('dPdbId',     p.pdbId);
+  setText('dTitle',     p.title);
+  setText('dType',      p.macromoleculeType||p.experimentMethod);
+  setText('dKeywords',  (p.keywords||[]).join(', ')||'—');
+  setText('dOrganism',  p.organism);
+  setText('dSciName',   p.scientificName);
+  setText('dTaxId',     p.taxId ? 'NCBI:'+p.taxId : '—');
+  setText('dGene',      p.geneName);
+  setText('dFunction',  p.functionDescription);
+  setText('dMethod',    p.experimentMethod);
+  setText('dResolution',p.resolution);
+  setText('dSpaceGroup',p.spaceGroup);
+  setText('dUnitCell',  p.unitCell);
+  setText('dDeposited', shortDate(p.depositionDate));
+  setText('dReleased',  shortDate(p.releaseDate));
+  setText('dAtoms',     p.atomCount>0 ? p.atomCount.toLocaleString() : '—');
+  setText('dResidues',  p.residueCount>0 ? p.residueCount.toLocaleString() : '—');
+  setText('dChains',    p.chainCount>0 ? String(p.chainCount) : '—');
+  setText('dMw',        p.molecularWeight);
+
+  // Publications
+  renderPublications(p.publications||[]);
+
+  // Sequences
+  renderSequences(p.pdbId, p.sequenceChains||[]);
+}
+
+// ── Publications ────────────────────────────────
+function renderPublications(pubs){
+  const empty   = document.getElementById('pubsEmpty');
+  const content = document.getElementById('pubsContent');
+  content.innerHTML='';
+  if(!pubs||pubs.length===0){
+    empty.style.display='block';
+    empty.textContent='No publications found for this entry';
+    return;
+  }
+  empty.style.display='none';
+
+  pubs.forEach(pub=>{
+    const card = document.createElement('div');
+    card.className='pub-card';
+
+    const title = pub.title||'(No title)';
+    const authors = formatAuthors(pub.authors||[]);
+    const journal = pub.journal||'';
+    const year    = pub.year||'';
+    const doi     = pub.doi;
+    const pmid    = pub.pmid;
+    const doiUrl  = doi ? 'https://doi.org/'+doi : null;
+
+    card.innerHTML=`
+      <div class="pub-title">${escHtml(title)}</div>
+      <div class="pub-authors">${escHtml(authors)}</div>
+      <div class="pub-meta">
+        ${journal?`<span class="pub-journal">${escHtml(journal)}</span>`:''}
+        ${year?`<span class="pub-year">(${escHtml(year)})</span>`:''}
+        ${pmid?`<span class="pub-pmid">PMID: ${escHtml(pmid)}</span>`:''}
+      </div>
+      ${doiUrl?`
+      <div class="pub-doi-row">
+        <span class="doi-link" onclick="openUrl('${doiUrl}')">doi: ${escHtml(doi)}</span>
+        <button class="open-doi-btn" onclick="openUrl('${doiUrl}')">OPEN ↗</button>
+      </div>`:''}
+    `;
+    content.appendChild(card);
+  });
+}
+
+// Open URL in real browser tab (not popup)
+function openUrl(url){
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+// ── Sequences ───────────────────────────────────
+function renderSequences(pdbId, chains){
+  const content = document.getElementById('seqContent');
+  const title   = document.getElementById('seqTitle');
+  content.innerHTML='';
+  fastaCache='';
+
+  if(!chains||chains.length===0){
+    content.innerHTML='<div class="seq-empty">Sequence data not available for this entry</div>';
+    return;
+  }
+
+  title.textContent='🧬 Amino Acid Sequence  ('+chains.length+' chain'+(chains.length>1?'s':'')+')';
+  const CHAIN_COLORS=['#ff4d6d','#00ffa3','#00d4ff','#a855f7','#ffb800','#ff69b4'];
+
+  chains.forEach((sc,i)=>{
+    const color = CHAIN_COLORS[i%CHAIN_COLORS.length];
+    const block = document.createElement('div');
+    block.className='seq-chain-block';
+
+    const seq   = sc.sequence||'';
+    const fasta = '>'+pdbId+'_'+(sc.chainId||'?')+(sc.description?' '+sc.description:'')+'\n'+wordwrap(seq,60)+'\n';
+    fastaCache += fasta;
+
+    let rowsHtml='';
+    for(let r=0;r<seq.length;r+=60){
+      const chunk=seq.slice(r,r+60);
+      rowsHtml+=`<div class="seq-row"><span class="seq-num">${r+1}</span><span class="seq-chars">${colorizeSeq(chunk)}</span></div>`;
+    }
+
+    block.innerHTML=`
+      <div class="seq-chain-badge">
+        <span class="chain-label" style="color:${color};border-color:${color};background:${color}18">Chain ${sc.chainId||'?'}</span>
+        ${sc.macromoleculeType?`<span class="chain-meta">${escHtml(sc.macromoleculeType)}</span>`:''}
+        ${sc.length>0?`<span class="chain-meta">${sc.length} residues</span>`:''}
+        ${sc.geneName?`<span class="chain-meta">Gene: ${escHtml(sc.geneName)}</span>`:''}
+      </div>
+      <div class="fasta-header">&gt;${escHtml(pdbId+'_'+(sc.chainId||'?'))}${sc.description?' '+escHtml(sc.description):''}</div>
+      <div class="seq-rows">${seq?rowsHtml:'<span class="seq-empty">No sequence data</span>'}</div>
+    `;
+
+    if(i>0){ const sep=document.createElement('hr'); sep.style.cssText='border:none;border-top:1px solid var(--border1);margin:10px 0'; content.appendChild(sep); }
+    content.appendChild(block);
+  });
+}
+
+// Color amino acids by chemical property
+function colorizeSeq(seq){
+  const map={
+    'AVLIMFWP':'#c084fc', // hydrophobic → purple
+    'GSTCYNQ' :'#67e8f9', // polar → cyan
+    'KRH'     :'#4ade80', // positive → green
+    'DE'      :'#f87171', // negative → red
+    'AGCTU'   :'#fbbf24', // nucleotide → amber
+  };
+  return seq.split('').map(aa=>{
+    for(const [grp,col] of Object.entries(map)){
+      if(grp.includes(aa)) return `<span style="color:${col}">${aa}</span>`;
+    }
+    return aa;
+  }).join('');
+}
+
+function copyFasta(){
+  if(!fastaCache){notify('No sequence loaded','info');return;}
+  navigator.clipboard.writeText(fastaCache).then(()=>notify('FASTA copied!','ok'));
+}
+
+// ── Loading state ────────────────────────────────
+function setLoading(active,text='LOADING',sub=''){
+  const ov = document.getElementById('loadingOverlay');
+  if(active){
+    ov.classList.remove('hidden');
+    document.getElementById('loadingText').textContent=text;
+    document.getElementById('loadingSub').textContent=sub;
+    document.getElementById('loadBtn').disabled=true;
+  } else {
+    ov.classList.add('hidden');
+    document.getElementById('loadBtn').disabled=false;
+  }
+}
+
+// ── Notifications ────────────────────────────────
+function notify(msg, type='info', ms=3500){
+  const c=document.getElementById('notifContainer');
+  const n=document.createElement('div');
+  n.className='notif '+type;
+  n.textContent=(type==='ok'?'✓  ':type==='err'?'⚠  ':'')+msg;
+  c.appendChild(n);
+  setTimeout(()=>{ n.style.transition='opacity 0.3s'; n.style.opacity='0'; setTimeout(()=>n.remove(),300); },ms);
+}
+
+// ── Quick load presets ────────────────────────────
+function quickLoad(pdbId){
+  document.getElementById('searchInput').value=pdbId;
+  loadProtein(pdbId);
+}
+
+// ── Event listeners ──────────────────────────────
+document.getElementById('loadBtn').addEventListener('click',()=>loadProtein(document.getElementById('searchInput').value));
+document.getElementById('searchInput').addEventListener('keydown',e=>{ if(e.key==='Enter') loadProtein(e.target.value); });
+
+// ── Utilities ────────────────────────────────────
+function setText(id,val){ const el=document.getElementById(id); if(el) el.textContent=val||'—'; }
+function truncate(s,n){ return s&&s.length>n?s.slice(0,n-3)+'...':s; }
+function shortDate(d){ return d&&d.length>=10?d.slice(0,10):d||'—'; }
+function escHtml(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+function wordwrap(s,n){ if(!s)return''; let out=''; for(let i=0;i<s.length;i+=n){ out+=s.slice(i,i+n)+'\n'; } return out.trim(); }
+function formatAuthors(arr){ if(!arr||!arr.length)return 'Unknown'; if(arr.length<=3)return arr.join(', '); return arr[0]+', '+arr[1]+', '+arr[2]+' et al.'; }
+
+// ── Init ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', ()=>{
+  // Show loading briefly then hide (viewer initializes on first load)
+  setTimeout(()=>setLoading(false), 300);
+  initViewer();
+});
+</script>
+</body>
+</html>
